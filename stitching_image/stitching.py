@@ -44,6 +44,9 @@ def Affine( x_origin, y_origin, coef_array ):
     y_trans = c*x_origin + d*y_origin + f
     return x_trans, y_trans
 
+def Pseudo_Affine( x_origin, y_origin, coef_array ):
+    pass
+
 # read image
 img1 = cv2.imread( 'images/first_two/DSC_2231.jpg' ) # left
 img2 = cv2.imread( 'images/first_two/DSC_2230.jpg' ) # right
