@@ -16,6 +16,22 @@ def Set_3_mark_points():
 
     return img1_xy, img2_xy
 
+def Set_4_mark_points():
+    img1_point1_x = 2413; img1_point1_y = 2268
+    img1_point2_x = 3082; img1_point2_y = 2117
+    img1_point3_x = 2980; img1_point3_y = 3304
+    img1_point4_x = 2980; img1_point4_y = 3304
+
+    img2_point1_x = 2007; img2_point1_y = 2262
+    img2_point2_x = 2626; img2_point2_y = 2110
+    img2_point3_x = 2564; img2_point3_y = 3249
+    img2_point4_x = 2564; img2_point4_y = 3249
+
+    img1_xy = [ img1_point1_x, img1_point1_y, img1_point2_x, img1_point2_y, img1_point3_x, img1_point3_y, img1_point4_x, img1_point4_y ]
+    img2_xy = [ img2_point1_x, img2_point1_y, img2_point2_x, img2_point2_y, img2_point3_x, img2_point3_y, img2_point4_x, img2_point4_y ]
+
+    return img1_xy, img2_xy
+
 def Get_affine_coef( xy_origin , xy_trans):
     matrixA = np.array([
         [xy_origin[0], xy_origin[1], 0, 0, 1, 0],
@@ -27,6 +43,24 @@ def Get_affine_coef( xy_origin , xy_trans):
     ])
 
     matrixB = np.array( xy_trans ).reshape(6, -1)
+
+    matrixA_inv = np.linalg.inv(matrixA)
+    affine_coef = matrixA_inv.dot(matrixB)
+    return affine_coef
+
+def Get_pseudo_affine_coef( xy_origin , xy_trans):
+    matrixA = np.array([
+        [xy_origin[0], xy_origin[1], xy_origin[0]*xy_origin[1], 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, xy_origin[0], xy_origin[1], xy_origin[0]*xy_origin[1], 1],
+        [xy_origin[2], xy_origin[3], xy_origin[2]*xy_origin[3], 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, xy_origin[2], xy_origin[3], xy_origin[2]*xy_origin[3], 1],
+        [xy_origin[4], xy_origin[5], xy_origin[4]*xy_origin[5], 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, xy_origin[4], xy_origin[5], xy_origin[4]*xy_origin[5], 1],
+        [xy_origin[6], xy_origin[7], xy_origin[6]*xy_origin[7], 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, xy_origin[6], xy_origin[7], xy_origin[6]*xy_origin[7], 1]
+    ])
+
+    matrixB = np.array( xy_trans ).reshape(8, -1)
 
     matrixA_inv = np.linalg.inv(matrixA)
     affine_coef = matrixA_inv.dot(matrixB)
