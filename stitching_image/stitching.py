@@ -102,4 +102,4 @@ for y in range(0, stitch1_height):
                 stitch1[y,x,k] = greyscale
 
 # write stitched image
-cv2.imwrite( 'stitch1.jpg', stitch1 )
+cv2.imwrite( 'images/first_two/output_img/stitch_3points.jpg', stitch1 )
