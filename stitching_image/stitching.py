@@ -20,12 +20,12 @@ def Set_4_mark_points():
     img1_point1_x = 2413; img1_point1_y = 2268
     img1_point2_x = 3082; img1_point2_y = 2117
     img1_point3_x = 2980; img1_point3_y = 3304
-    img1_point4_x = 2980; img1_point4_y = 3304
+    img1_point4_x = 1284; img1_point4_y = 5376
 
     img2_point1_x = 2007; img2_point1_y = 2262
     img2_point2_x = 2626; img2_point2_y = 2110
     img2_point3_x = 2564; img2_point3_y = 3249
-    img2_point4_x = 2564; img2_point4_y = 3249
+    img2_point4_x = 974; img2_point4_y = 5419
 
     img1_xy = [ img1_point1_x, img1_point1_y, img1_point2_x, img1_point2_y, img1_point3_x, img1_point3_y, img1_point4_x, img1_point4_y ]
     img2_xy = [ img2_point1_x, img2_point1_y, img2_point2_x, img2_point2_y, img2_point3_x, img2_point3_y, img2_point4_x, img2_point4_y ]
@@ -79,18 +79,35 @@ def Affine( x_origin, y_origin, coef_array ):
     return x_trans, y_trans
 
 def Pseudo_Affine( x_origin, y_origin, coef_array ):
-    pass
+    a = coef_array[0].item()
+    b = coef_array[1].item()
+    c = coef_array[2].item()
+    d = coef_array[3].item()
+    e = coef_array[4].item()
+    f = coef_array[5].item()
+    g = coef_array[6].item()
+    h = coef_array[7].item()
+
+    x_trans = a*x_origin + b*y_origin + c*x_origin*y_origin + d
+    y_trans = e*x_origin + f*y_origin + g*x_origin*y_origin + h
+    return x_trans, y_trans
 
 # read image
 img1 = cv2.imread( 'images/first_two/DSC_2231.jpg' ) # left
 img2 = cv2.imread( 'images/first_two/DSC_2230.jpg' ) # right
 
 # set three point
-img1_xy, img2_xy = Set_3_mark_points()
+img1_xy, img2_xy = Set_4_mark_points()
 
 # get trans matrix from 1 to 2 and from 2 to 1
-affine_1to2_coef = Get_affine_coef(img1_xy, img2_xy)
-affine_2to1_coef = Get_affine_coef(img2_xy, img1_xy)
+affine_1to2_coef = Get_pseudo_affine_coef(img1_xy, img2_xy)
+affine_2to1_coef = Get_pseudo_affine_coef(img2_xy, img1_xy)
+
+'''
+print(Pseudo_Affine(1284, 5376, affine_1to2_coef))
+print(Pseudo_Affine(2626, 2110, affine_2to1_coef))
+print()
+'''
 
 # get stitch1 size from 2 to 1
 img1_height, img1_width = img1.shape[:2]
@@ -101,7 +118,7 @@ border_y = [0, img1_height]
 
 for i in [0, img2_width]:
     for j in [0, img2_height]:
-        temp_x , temp_y = Affine(i, j, affine_2to1_coef)
+        temp_x , temp_y = Pseudo_Affine(i, j, affine_2to1_coef)
         border_x.append(temp_x)
         border_y.append(temp_y)
         #print(temp_x, temp_y)
@@ -114,6 +131,14 @@ stitch1_right = math.ceil(max(border_x))
 stitch1_height = stitch1_bottom - stitch1_top + 1
 stitch1_width = stitch1_right - stitch1_left + 1
 
+'''
+print()
+print(stitch1_top, stitch1_bottom)
+print(stitch1_left, stitch1_right)
+print()
+print(stitch1_height, stitch1_width)
+'''
+
 # set stitch1 zeros
 stitch1 = np.zeros( [ stitch1_height, stitch1_width, 3 ])
 
@@ -124,7 +149,7 @@ for y in range(0, stitch1_height):
         if (0 <= (x + stitch1_left) <= (img1_width - 1)) and (0 <= (y + stitch1_top) <= (img1_height - 1)):
             stitch1[y,x,:] = img1[y+stitch1_top, x+stitch1_left, :]
         else:
-            x_in_img2, y_in_img2 = Affine(x+stitch1_left, y+stitch1_top, affine_1to2_coef)
+            x_in_img2, y_in_img2 = Pseudo_Affine(x+stitch1_left, y+stitch1_top, affine_1to2_coef)
             if not ((0 <= x_in_img2 <= (img2_width-1)) and (0 <= y_in_img2 <= (img2_height-1))):
                 continue
             dist_a = x_in_img2 - math.floor(x_in_img2)
@@ -139,4 +164,4 @@ for y in range(0, stitch1_height):
                 stitch1[y,x,k] = greyscale
 
 # write stitched image
-cv2.imwrite( 'images/first_two/output_img/stitch_3points.jpg', stitch1 )
+cv2.imwrite( 'images/first_two/output_img/stitch_4points.jpg', stitch1 )
