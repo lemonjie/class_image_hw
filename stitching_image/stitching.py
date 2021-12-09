@@ -32,6 +32,24 @@ def Get_affine_coef( xy_origin , xy_trans):
     affine_coef = matrixA_inv.dot(matrixB)
     return affine_coef
 
+def Get_pseudo_affine_coef( xy_origin , xy_trans):
+    matrixA = np.array([
+        [xy_origin[0], xy_origin[1], xy_origin[0]*xy_origin[1], 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, xy_origin[0], xy_origin[1], xy_origin[0]*xy_origin[1], 1],
+        [xy_origin[2], xy_origin[3], xy_origin[2]*xy_origin[3], 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, xy_origin[2], xy_origin[3], xy_origin[2]*xy_origin[3], 1],
+        [xy_origin[4], xy_origin[5], xy_origin[4]*xy_origin[5], 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, xy_origin[4], xy_origin[5], xy_origin[4]*xy_origin[5], 1],
+        [xy_origin[6], xy_origin[7], xy_origin[6]*xy_origin[7], 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, xy_origin[6], xy_origin[7], xy_origin[6]*xy_origin[7], 1]
+    ])
+
+    matrixB = np.array( xy_trans ).reshape(8, -1)
+
+    matrixA_inv = np.linalg.inv(matrixA)
+    affine_coef = matrixA_inv.dot(matrixB)
+    return affine_coef
+
 def Affine( x_origin, y_origin, coef_array ):
     a = coef_array[0].item()
     b = coef_array[1].item()
