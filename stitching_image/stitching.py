@@ -2,14 +2,14 @@ import cv2
 import numpy as np
 import math
 
-def Set_mark_points():
-    img1_point1_x = 1298; img1_point1_y = 2227
-    img1_point2_x = 2302; img1_point2_y = 3175
-    img1_point3_x = 2512; img1_point3_y = 3225
+def Set_3_mark_points():
+    img1_point1_x = 2413; img1_point1_y = 2268
+    img1_point2_x = 3082; img1_point2_y = 2117
+    img1_point3_x = 2980; img1_point3_y = 3304
 
-    img2_point1_x = 900; img2_point1_y = 2230
-    img2_point2_x = 1927; img2_point2_y = 3152
-    img2_point3_x = 2126; img2_point3_y = 3191
+    img2_point1_x = 2007; img2_point1_y = 2262
+    img2_point2_x = 2626; img2_point2_y = 2110
+    img2_point3_x = 2564; img2_point3_y = 3249
 
     img1_xy = [ img1_point1_x, img1_point1_y, img1_point2_x, img1_point2_y, img1_point3_x, img1_point3_y ]
     img2_xy = [ img2_point1_x, img2_point1_y, img2_point2_x, img2_point2_y, img2_point3_x, img2_point3_y ]
@@ -49,7 +49,7 @@ img1 = cv2.imread( 'images/first_two/DSC_2231.jpg' ) # left
 img2 = cv2.imread( 'images/first_two/DSC_2230.jpg' ) # right
 
 # set three point
-img1_xy, img2_xy = Set_mark_points()
+img1_xy, img2_xy = Set_3_mark_points()
 
 # get trans matrix from 1 to 2 and from 2 to 1
 affine_1to2_coef = Get_affine_coef(img1_xy, img2_xy)
@@ -67,6 +67,7 @@ for i in [0, img2_width]:
         temp_x , temp_y = Affine(i, j, affine_2to1_coef)
         border_x.append(temp_x)
         border_y.append(temp_y)
+        #print(temp_x, temp_y)
 
 stitch1_top = math.floor(min(border_y))
 stitch1_bottom = math.ceil(max(border_y))
@@ -80,16 +81,13 @@ stitch1_width = stitch1_right - stitch1_left + 1
 stitch1 = np.zeros( [ stitch1_height, stitch1_width, 3 ])
 
 # put img1 and img2 on stitch1
-img1_x_min = 0 - stitch1_left; img1_x_max = img1_width -1 - stitch1_left
-img1_y_min = 0 - stitch1_top; img1_y_max = img1_height -1 - stitch1_top
-
 for y in range(0, stitch1_height):
     print(y)
     for x in range(0, stitch1_width):
-        if (img1_x_min <= x <= img1_x_max) and (img1_y_min <= y <= img1_y_max):
+        if (0 <= (x + stitch1_left) <= (img1_width - 1)) and (0 <= (y + stitch1_top) <= (img1_height - 1)):
             stitch1[y,x,:] = img1[y+stitch1_top, x+stitch1_left, :]
         else:
-            x_in_img2, y_in_img2 = Affine(x, y, affine_1to2_coef)
+            x_in_img2, y_in_img2 = Affine(x+stitch1_left, y+stitch1_top, affine_1to2_coef)
             if not ((0 <= x_in_img2 <= (img2_width-1)) and (0 <= y_in_img2 <= (img2_height-1))):
                 continue
             dist_a = x_in_img2 - math.floor(x_in_img2)
