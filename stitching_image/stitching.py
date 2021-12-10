@@ -8,7 +8,7 @@ P1 = 0; P2 = 1; P3 = 2 # those three points we choose
 IMG_L = 0; IMG_R = 1 # left image or right image at the overlap between two images
 L_TO_R = 0; R_TO_L = 1 # L_TO_R means left affine to right
 STITCH_12 = 0; STITCH_23 = 1; STITCH_34 = 2 # STITCH_12 means stitching image 1 & 2
-STITCH_LIST = [STITCH_12, STITCH_23, STITCH_34]
+STITCH_LIST = [ STITCH_12, STITCH_23, STITCH_34 ]
 
 def Set_3_mark_points():
     # img 1 2 mapping
@@ -39,13 +39,13 @@ def Set_3_mark_points():
     img43_point3_x = 2322; img43_point3_y = 3386
 
     img12_mapping = [ [[img12_point1_x, img12_point1_y], [img12_point2_x, img12_point2_y], [img12_point3_x, img12_point3_y]],
-                     [[img21_point1_x, img21_point1_y], [img21_point2_x, img21_point2_y], [img21_point3_x, img21_point3_y]] ]
+                      [[img21_point1_x, img21_point1_y], [img21_point2_x, img21_point2_y], [img21_point3_x, img21_point3_y]] ]
     img23_mapping = [ [[img23_point1_x, img23_point1_y], [img23_point2_x, img23_point2_y], [img23_point3_x, img23_point3_y]],
                       [[img32_point1_x, img32_point1_y], [img32_point2_x, img32_point2_y], [img32_point3_x, img32_point3_y]] ]
     img34_mapping = [ [[img34_point1_x, img34_point1_y], [img34_point2_x, img34_point2_y], [img34_point3_x, img34_point3_y]],
                       [[img43_point1_x, img43_point1_y], [img43_point2_x, img43_point2_y], [img43_point3_x, img43_point3_y]] ]
 
-    return [ img12_mapping, img23_mapping, img34_mapping] # stitch edge -> edge left/right -> point 1/2/3 -> x/y
+    return [ img12_mapping, img23_mapping, img34_mapping ] # stitch edge -> edge left/right -> point 1/2/3 -> x/y
 
 def Get_affine_coef( xy_origin, xy_trans ):
     matrixA = np.array([
@@ -109,7 +109,8 @@ for img_size in imgs_size[1:]:
             current_affine = stitch_part
             affined_x = x; affined_y = y
             while (current_affine >= 0):
-                affined_x , affined_y = Affine(affined_x, affined_y, affine_coef[current_affine][R_TO_L]) # eg. img4 trans to 3, then trans to 2, then tans to 1
+                # eg. img4 trans to 3, then trans to 2, then tans to 1
+                affined_x , affined_y = Affine(affined_x, affined_y, affine_coef[current_affine][R_TO_L])
                 current_affine = current_affine - 1
             border_x.append(affined_x)
             border_y.append(affined_y)
@@ -123,6 +124,11 @@ stitched_right = math.ceil(max(border_x))
 stitched_height = stitched_bottom - stitched_top + 1
 stitched_width = stitched_right - stitched_left + 1
 
+# set first image trans to/from canvas coef
+first_coef_LtoR = np.array([ 1, 0, 0, 1, stitched_left, stitched_top ]).reshape(6,-1)
+first_coef_RtoL = np.array([ 1, 0, 0, 1, -stitched_left, -stitched_top ]).reshape(6,-1)
+affine_coef.insert(0, [first_coef_LtoR, first_coef_RtoL])
+
 # set stitched zeros
 stitched = np.zeros( [ stitched_height, stitched_width, 3 ])
 
@@ -130,22 +136,31 @@ stitched = np.zeros( [ stitched_height, stitched_width, 3 ])
 for y in range(0, stitched_height):
     print(y)
     for x in range(0, stitched_width):
-        if (0 <= (x + stitched_left) <= (img1_width - 1)) and (0 <= (y + stitched_top) <= (img1_height - 1)):
-            stitched[y,x,:] = img1[y+stitched_top, x+stitched_left, :]
-        else:
-            x_in_img2, y_in_img2 = Affine(x+stitched_left, y+stitched_top, affine_coef[STITCH_12][L_TO_R])
-            if not ((0 <= x_in_img2 <= (img2_width-1)) and (0 <= y_in_img2 <= (img2_height-1))):
+        current_stitch = 0
+        affined_x = x; affined_y = y
+        found = 0
+        while (not found):
+            if(current_stitch >= len(affine_coef)):
+                found = 1 # found that this point is not in any image
                 continue
-            dist_a = x_in_img2 - math.floor(x_in_img2)
-            dist_b = y_in_img2 - math.floor(y_in_img2)
-            for k in range(0,3):
-                point_a = img2[math.floor(y_in_img2), math.floor(x_in_img2), k]
-                point_b = img2[math.floor(y_in_img2), math.ceil(x_in_img2), k]
-                point_c = img2[math.ceil(y_in_img2), math.floor(x_in_img2), k]
-                point_d = img2[math.ceil(y_in_img2), math.ceil(x_in_img2), k]
-                greyscale = point_a*(1-dist_a)*(1-dist_b) + point_b*(dist_a)*(1-dist_b) + \
-                            point_c*(1-dist_a)*(dist_b) + point_d*(dist_a)*(dist_b)
-                stitched[y,x,k] = greyscale
+            affined_x, affined_y = Affine(affined_x, affined_y, affine_coef[current_stitch][L_TO_R])
+            #print(affined_x, affined_y)
+            if ((0 <= affined_x <= (imgs_size[current_stitch][WIDTH]-1)) and \
+                (0 <= affined_y <= (imgs_size[current_stitch][HEIGHT]-1))):
+                #print('found', current_stitch)
+                current_img = imgs[current_stitch]
+                dist_a = affined_x - math.floor(affined_x)
+                dist_b = affined_y - math.floor(affined_y)
+                for k in range(0,3):
+                    point_a = current_img[math.floor(affined_y), math.floor(affined_x), k]
+                    point_b = current_img[math.floor(affined_y), math.ceil(affined_x), k]
+                    point_c = current_img[math.ceil(affined_y), math.floor(affined_x), k]
+                    point_d = current_img[math.ceil(affined_y), math.ceil(affined_x), k]
+                    greyscale = point_a*(1-dist_a)*(1-dist_b) + point_b*(dist_a)*(1-dist_b) + \
+                                point_c*(1-dist_a)*(dist_b) + point_d*(dist_a)*(dist_b)
+                    stitched[y,x,k] = greyscale
+                found = 1
+            current_stitch = current_stitch + 1
 
 # write stitched image
 cv2.imwrite( 'images/series4/output_img/stitch4_3points.jpg', stitched )
