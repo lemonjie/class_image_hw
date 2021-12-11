@@ -7,10 +7,8 @@ HEIGHT = 0; WIDTH = 1
 P1 = 0; P2 = 1; P3 = 2 # those three points we choose
 IMG_L = 0; IMG_R = 1 # left image or right image at the overlap between two images
 L_TO_R = 0; R_TO_L = 1 # L_TO_R means left affine to right
-STITCH_12 = 0; STITCH_23 = 1; STITCH_34 = 2 # STITCH_12 means stitching image 1 & 2
-STITCH_LIST = [ STITCH_12, STITCH_23, STITCH_34 ]
 
-def Set_3_mark_points():
+def Set_3_mark_points(): # return mapping [ stitch edge ][ edge left/right ][ point 1/2/3 ][ x/y ]
     # img 1 2 mapping
     img12_point1_x = 2841; img12_point1_y = 2028
     img12_point2_x = 2642; img12_point2_y = 2336
@@ -45,7 +43,7 @@ def Set_3_mark_points():
     img34_mapping = [ [[img34_point1_x, img34_point1_y], [img34_point2_x, img34_point2_y], [img34_point3_x, img34_point3_y]],
                       [[img43_point1_x, img43_point1_y], [img43_point2_x, img43_point2_y], [img43_point3_x, img43_point3_y]] ]
 
-    return [ img12_mapping, img23_mapping, img34_mapping ] # stitch edge -> edge left/right -> point 1/2/3 -> x/y
+    return [ img12_mapping, img23_mapping, img34_mapping ]
 
 def Get_affine_coef( xy_origin, xy_trans ):
     matrixA = np.array([
@@ -75,6 +73,20 @@ def Affine( x_origin, y_origin, coef_array ):
     y_trans = c*x_origin + d*y_origin + f
     return x_trans, y_trans
 
+def Interpolation( x, y, img ):
+    dist_a = x - math.floor(x)
+    dist_b = y - math.floor(y)
+    color_value = []
+    for k in range(0,3):
+        point_a = img[0, 0, k]
+        point_b = img[0, -1, k]
+        point_c = img[-1, 0, k]
+        point_d = img[-1, -1, k]
+        greyscale = point_a*(1-dist_a)*(1-dist_b) + point_b*(dist_a)*(1-dist_b) + \
+                    point_c*(1-dist_a)*(dist_b) + point_d*(dist_a)*(dist_b)
+        color_value.append(greyscale)
+    return color_value
+
 # read image from left to right
 img1 = cv2.imread( 'images/series4/DSC_2214.jpg' )
 img2 = cv2.imread( 'images/series4/DSC_2213.jpg' )
@@ -87,7 +99,7 @@ xy_mapping = Set_3_mark_points()
 
 # get trans matrix from 1 to 2 and from 2 to 1
 affine_coef = [] # stitch edge -> affine left_to_right / right_to_left
-for i in STITCH_LIST:
+for i in range(0, len(imgs)-1):
     coef_LtoR = Get_affine_coef(xy_mapping[i][IMG_L], xy_mapping[i][IMG_R])
     coef_RtoL = Get_affine_coef(xy_mapping[i][IMG_R], xy_mapping[i][IMG_L])
     current_stitch_coef = [coef_LtoR, coef_RtoL]
@@ -144,11 +156,11 @@ for y in range(0, stitched_height):
                 found = 1 # found that this point is not in any image
                 continue
             affined_x, affined_y = Affine(affined_x, affined_y, affine_coef[current_stitch][L_TO_R])
-            #print(affined_x, affined_y)
             if ((0 <= affined_x <= (imgs_size[current_stitch][WIDTH]-1)) and \
                 (0 <= affined_y <= (imgs_size[current_stitch][HEIGHT]-1))):
-                #print('found', current_stitch)
-                current_img = imgs[current_stitch]
+                current_img_part = imgs[current_stitch][math.floor(affined_y):math.ceil(affined_y)+1,
+                                                        math.floor(affined_x):math.ceil(affined_x)+1,:]
+                '''
                 dist_a = affined_x - math.floor(affined_x)
                 dist_b = affined_y - math.floor(affined_y)
                 for k in range(0,3):
@@ -159,6 +171,8 @@ for y in range(0, stitched_height):
                     greyscale = point_a*(1-dist_a)*(1-dist_b) + point_b*(dist_a)*(1-dist_b) + \
                                 point_c*(1-dist_a)*(dist_b) + point_d*(dist_a)*(dist_b)
                     stitched[y,x,k] = greyscale
+                '''
+                stitched[y,x,:] = Interpolation( affined_x, affined_y, current_img_part)
                 found = 1
             current_stitch = current_stitch + 1
 
