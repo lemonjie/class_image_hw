@@ -61,6 +61,31 @@ def Get_affine_coef( xy_origin, xy_trans ):
     affine_coef = matrixA_inv.dot(matrixB)
     return affine_coef
 
+def Get_stitched_size( imgs_size, affine_coef ):
+    border_x = [0, imgs_size[0][WIDTH]]
+    border_y = [0, imgs_size[0][HEIGHT]]
+
+    stitch_part = 0
+    for img_size in imgs_size[1:]:
+        for x in [0, img_size[WIDTH]]:
+            for y in [0, img_size[HEIGHT]]:
+                current_affine = stitch_part
+                affined_x = x; affined_y = y
+                while (current_affine >= 0):
+                    # eg. img4 trans to 3, then trans to 2, then tans to 1
+                    affined_x , affined_y = Affine(affined_x, affined_y, affine_coef[current_affine][R_TO_L])
+                    current_affine = current_affine - 1
+                border_x.append(affined_x)
+                border_y.append(affined_y)
+        stitch_part = stitch_part + 1
+
+    stitched_top = math.floor(min(border_y))
+    stitched_bottom = math.ceil(max(border_y))
+    stitched_left = math.floor(min(border_x))
+    stitched_right = math.ceil(max(border_x))
+
+    return ( stitched_top, stitched_bottom, stitched_left, stitched_right )
+
 def Affine( x_origin, y_origin, coef_array ):
     a = coef_array[0].item()
     b = coef_array[1].item()
@@ -105,33 +130,14 @@ for i in range(0, len(imgs)-1):
     current_stitch_coef = [coef_LtoR, coef_RtoL]
     affine_coef.append(current_stitch_coef)
 
-# get stitched size
+# get original images and stitched image size
 imgs_size = []
 for img in imgs:
     current_size = img.shape[:2]
     imgs_size.append(list(current_size))
 
-border_x = [0, imgs_size[0][WIDTH]]
-border_y = [0, imgs_size[0][HEIGHT]]
-
-stitch_part = 0
-for img_size in imgs_size[1:]:
-    for x in [0, img_size[WIDTH]]:
-        for y in [0, img_size[HEIGHT]]:
-            current_affine = stitch_part
-            affined_x = x; affined_y = y
-            while (current_affine >= 0):
-                # eg. img4 trans to 3, then trans to 2, then tans to 1
-                affined_x , affined_y = Affine(affined_x, affined_y, affine_coef[current_affine][R_TO_L])
-                current_affine = current_affine - 1
-            border_x.append(affined_x)
-            border_y.append(affined_y)
-    stitch_part = stitch_part + 1
-
-stitched_top = math.floor(min(border_y))
-stitched_bottom = math.ceil(max(border_y))
-stitched_left = math.floor(min(border_x))
-stitched_right = math.ceil(max(border_x))
+(stitched_top, stitched_bottom,
+ stitched_left, stitched_right) = Get_stitched_size( imgs_size, affine_coef )
 
 stitched_height = stitched_bottom - stitched_top + 1
 stitched_width = stitched_right - stitched_left + 1
@@ -160,18 +166,6 @@ for y in range(0, stitched_height):
                 (0 <= affined_y <= (imgs_size[current_stitch][HEIGHT]-1))):
                 current_img_part = imgs[current_stitch][math.floor(affined_y):math.ceil(affined_y)+1,
                                                         math.floor(affined_x):math.ceil(affined_x)+1,:]
-                '''
-                dist_a = affined_x - math.floor(affined_x)
-                dist_b = affined_y - math.floor(affined_y)
-                for k in range(0,3):
-                    point_a = current_img[math.floor(affined_y), math.floor(affined_x), k]
-                    point_b = current_img[math.floor(affined_y), math.ceil(affined_x), k]
-                    point_c = current_img[math.ceil(affined_y), math.floor(affined_x), k]
-                    point_d = current_img[math.ceil(affined_y), math.ceil(affined_x), k]
-                    greyscale = point_a*(1-dist_a)*(1-dist_b) + point_b*(dist_a)*(1-dist_b) + \
-                                point_c*(1-dist_a)*(dist_b) + point_d*(dist_a)*(dist_b)
-                    stitched[y,x,k] = greyscale
-                '''
                 stitched[y,x,:] = Interpolation( affined_x, affined_y, current_img_part)
                 found = 1
             current_stitch = current_stitch + 1
