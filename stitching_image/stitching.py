@@ -61,6 +61,18 @@ def Get_affine_coef( xy_origin, xy_trans ):
     affine_coef = matrixA_inv.dot(matrixB)
     return affine_coef
 
+def Affine( x_origin, y_origin, coef_array ):
+    a = coef_array[0].item()
+    b = coef_array[1].item()
+    c = coef_array[2].item()
+    d = coef_array[3].item()
+    e = coef_array[4].item()
+    f = coef_array[5].item()
+
+    x_trans = a*x_origin + b*y_origin + e
+    y_trans = c*x_origin + d*y_origin + f
+    return x_trans, y_trans
+
 def Get_stitched_size( imgs_size, affine_coef ):
     border_x = [0, imgs_size[0][WIDTH]]
     border_y = [0, imgs_size[0][HEIGHT]]
@@ -86,18 +98,6 @@ def Get_stitched_size( imgs_size, affine_coef ):
 
     return ( stitched_top, stitched_bottom, stitched_left, stitched_right )
 
-def Affine( x_origin, y_origin, coef_array ):
-    a = coef_array[0].item()
-    b = coef_array[1].item()
-    c = coef_array[2].item()
-    d = coef_array[3].item()
-    e = coef_array[4].item()
-    f = coef_array[5].item()
-
-    x_trans = a*x_origin + b*y_origin + e
-    y_trans = c*x_origin + d*y_origin + f
-    return x_trans, y_trans
-
 def Interpolation( x, y, img ):
     dist_a = x - math.floor(x)
     dist_b = y - math.floor(y)
@@ -122,7 +122,7 @@ imgs = [ img1, img2, img3, img4 ]
 # set three point
 xy_mapping = Set_3_mark_points()
 
-# get trans matrix from 1 to 2 and from 2 to 1
+# get trans matrix of each stitch from left to right and from right to left
 affine_coef = [] # stitch edge -> affine left_to_right / right_to_left
 for i in range(0, len(imgs)-1):
     coef_LtoR = Get_affine_coef(xy_mapping[i][IMG_L], xy_mapping[i][IMG_R])
