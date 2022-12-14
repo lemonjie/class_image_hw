@@ -24,9 +24,9 @@ origin_img = cv2.imread( 'images/cupcake.jpg' )
 height = origin_img.shape[0]
 width = origin_img.shape[1]
 
-sobel_img = np.zeros( [ height+4, width+4, 3 ])
-laplacian_img = np.zeros( [ height+4, width+4, 3 ])
-padding_origin = np.zeros( [ height+4, width+4, 3 ])
+sobel_img = np.zeros( [ height+4, width+4, COLOR ])
+laplacian_img = np.zeros( [ height+4, width+4, COLOR ])
+padding_origin = np.zeros( [ height+4, width+4, COLOR ])
 padding_origin[2:-2, 2:-2,:] = origin_img
 
 cov_range = int((sobel_x.shape[0]-1)/2)
